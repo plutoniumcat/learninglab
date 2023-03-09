@@ -5,6 +5,6 @@ class Curriculum(db.Model):
     # set primary key
     id = db.Column(db.Integer, primary_key=True)
     # set foreign key
-    user_id = db.Column(db.Integer, db.ForeignKey(User.id), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("USERS.id"), nullable=False)
     title = db.Column(db.String(), nullable=False)
     description = db.Column(db.String())
