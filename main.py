@@ -2,6 +2,12 @@
 # https://blog.hubspot.com/website/api-endpoint
 # https://api.cloudflare.com
 # https://edstem.org/au/courses/10081/lessons/27621/slides/195167
+
+
+# https://ait.instructure.com/courses/4487/assignments/49333
+# https://blog.hubspot.com/website/api-endpoint
+# https://api.cloudflare.com
+# https://edstem.org/au/courses/10081/lessons/27621/slides/195167
 # https://www.codementor.io/@sheena/understanding-sqlalchemy-cheat-sheet-du107lawl
 
 

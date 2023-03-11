@@ -35,7 +35,6 @@ def seed_db():
         admin = False
     )
     db.session.add(user2)
-    db.session.commit()
 
     tutorial1 = Tutorial(
         url = "https://www.w3schools.com/python/python_intro.asp",
@@ -65,7 +64,6 @@ def seed_db():
         description = "My Python journey"
     )
     db.session.add(curriculum1)
-    db.session.commit()
 
     association1 = Association(
         curriculum_id = curriculum1.id,
