@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from main import db
 from models.curriculum_associations import Association
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 
 associations = Blueprint('associations', __name__, url_prefix="/associations")
 

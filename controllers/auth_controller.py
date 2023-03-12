@@ -48,3 +48,14 @@ def auth_login():
     access_token = create_access_token(identity=str(user.id), expires_delta=expiry)
     # Return user email and access token
     return jsonify({"user":user.email, "token": access_token })
+
+# Decorator for other routes requiring authentication
+def authenticate_user():    
+    # Get ID of user
+    user_id = get_jwt_identity()
+    # Find user in database
+    user = User.query.get(user_id)
+    # Not a valid user
+    if not user:
+        return abort(401, description="Invalid user")
+    return user_id

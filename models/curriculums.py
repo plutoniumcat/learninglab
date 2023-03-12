@@ -1,3 +1,4 @@
+from sqlalchemy.orm import relationship
 from main import db
 
 class Curriculum(db.Model):
@@ -8,3 +9,4 @@ class Curriculum(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("USERS.id"), nullable=False)
     title = db.Column(db.String(), nullable=False)
     description = db.Column(db.String())
+    association = relationship("Association", cascade="all, delete-orphan")

@@ -41,7 +41,7 @@ def delete_tutorial():
     if not user:
         return abort(401, description="Invalid user")
     if not user.admin:
-        return abort(401, description="Not authorized to delete users")
+        return abort(401, description="Not authorized to delete tutorials")
     # Find tutorial to be deleted
     tutorial = Tutorial.query.filter_by(id=id).first()
     # Tutorial does not exist
