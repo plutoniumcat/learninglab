@@ -4,8 +4,10 @@ from main import db
 from models.users import User
 from models.curriculums import Curriculum
 from models.curriculum_associations import Association
+from models.tutorials import Tutorial
 from schemas.curriculum_schema import curriculum_schema, curriculums_schema
 from schemas.association_schema import association_schema
+from schemas.tutorial_schema import tutorial_schema
 
 
 curriculums = Blueprint('curriculums', __name__, url_prefix="/curriculums")
@@ -18,6 +20,33 @@ def get_curriculums():
     # return data from database in JSON format
     result = curriculums_schema.dump(curriculums_list)
     return jsonify(result)
+
+
+# Get curriculum and asssociated tutorials
+@curriculums.route("/<int:id>/", methods=["GET"])
+def get_curriculum(id):
+    # Get curriculum from database
+    curriculum = Curriculum.query.filter_by(id=id).first()
+    curriculum_info = curriculum_schema.dump(curriculum)
+    tutorials = db.session.query(Tutorial).join(Association).join(Curriculum).filter(Curriculum.id==id)
+    if tutorials:
+        result_list = [curriculum_info]
+        for tutorial in tutorials:
+            tutorial_dict = tutorial_schema.dump(tutorial)
+            tutorial_dict['id'] = tutorial.id
+            tutorial_dict['url'] = tutorial.url
+            tutorial_dict['user_id'] = tutorial.user_id
+            tutorial_dict['title'] = tutorial.title
+            tutorial_dict['author'] = tutorial.author
+            tutorial_dict['description'] = tutorial.description
+            tutorial_dict['level'] = tutorial.level
+            tutorial_dict['prerequsites'] = tutorial.prerequisites
+            tutorial_dict['pricing'] = tutorial.pricing
+            tutorial_dict['length'] = tutorial.length
+            result_list.append(tutorial_dict)
+        return result_list
+    else:
+        return abort(404, description="Curriculum not found")
 
 
 @curriculums.route("/", methods=["POST"])
