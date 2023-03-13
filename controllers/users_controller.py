@@ -1,6 +1,9 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, abort
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy import update
 from main import db
 from models.users import User
+from schemas.user_schema import user_schema, users_schema
 
 users = Blueprint('users', __name__, url_prefix="/users")
 
@@ -12,23 +15,40 @@ def get_users():
     result = users_schema.dump(users_list)
     return jsonify(result)
 
-@users.route("/", methods=["POST"])
-def create_user():
-    # Create a new user
-    user_fields = user_schema.load(request.json)
-    new_user = User()
-    new_user.username = user_fields["username"]
-    new_user.email = user_fields["email"]
-    new_user.password = user_fields["password"]
-    new_user.profile = user_fields["profile"]
-    new_user.admin = user_fields["admin"]
-    # add to database
-    db.session.add(new_user)
+
+@users.route("/<int:id>/", methods={"GET"})
+def get_user(id):
+    user = User.query.filter_by(id=id).first()
+    result = user_schema.dump(user)
+    return jsonify(result)
+
+
+@users.route("/<int:id>/", methods=["POST"])
+@jwt_required()
+def update_profile(id):
+    # Get ID of user who is attempting to edit
+    user_id = get_jwt_identity()
+    # Find user in database
+    user = User.query.get(user_id)
+    # Not a valid user
+    if not user:
+        return abort(401, description="Invalid user")
+    # Not the owner of the profile
+    elif int(user_id) != id:
+        return abort(401, description="Not authorized to edit this user's profile")
+    # Get profile data from request
+    json_data = request.json
+    new_profile = json_data['profile']
+    update_profile = update(User).where(User.id==id).values(profile=new_profile)
+    # Save to database
+    db.session.execute(update_profile)
     db.session.commit()
-    return jsonify(user_schema.dump(new_user))
+    return {'message': 'Profile updated successfully'}
+
 
 @users.route("/<int:id>/", methods=["DELETE"])
-def delete_user():
+@jwt_required()
+def delete_user(id):
     # Get ID of user who is attempting to delete
     user_id = get_jwt_identity()
     # Find user in database

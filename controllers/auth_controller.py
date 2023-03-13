@@ -8,6 +8,7 @@ from flask_jwt_extended import create_access_token
 
 auth = Blueprint('auth', __name__, url_prefix="/auth")
 
+
 @auth.route("/register", methods=["POST"])
 def auth_register():
     # Load request data into user schema
@@ -48,6 +49,7 @@ def auth_login():
     access_token = create_access_token(identity=str(user.id), expires_delta=expiry)
     # Return user email and access token
     return jsonify({"user":user.email, "token": access_token })
+
 
 # Decorator for other routes requiring authentication
 def authenticate_user():    
