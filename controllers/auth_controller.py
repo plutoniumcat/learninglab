@@ -52,9 +52,7 @@ def auth_login():
 
 #TODO Implement or delete this!
 # Decorator for other routes requiring authentication
-def authenticate_user():    
-    # Get ID of user
-    user_id = get_jwt_identity()
+def authenticate_user(user_id):
     # Find user in database
     user = User.query.get(user_id)
     # Not a valid user

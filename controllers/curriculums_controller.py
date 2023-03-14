@@ -8,10 +8,9 @@ from models.tutorials import Tutorial
 from schemas.curriculum_schema import curriculum_schema, curriculums_schema
 from schemas.association_schema import association_schema
 from schemas.tutorial_schema import tutorial_schema
-
+from controllers.auth_controller import authenticate_user
 
 curriculums = Blueprint('curriculums', __name__, url_prefix="/curriculums")
-
 
 @curriculums.route("/", methods=["GET"])
 def get_curriculums():

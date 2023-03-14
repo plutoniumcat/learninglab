@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request, abort
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy import update
 from main import db
 from models.tutorials import Tutorial
 from models.users import User
@@ -74,6 +75,36 @@ def create_tutorial():
     db.session.add(new_tutorial)
     db.session.commit()
     return jsonify(tutorial_schema.dump(new_tutorial))
+
+
+# Edit tutorial
+@tutorials.route("/<int:id>/edit", methods=["POST"])
+@jwt_required()
+def edit_tutorial(id):
+    # Get ID of user who is attempting to edit
+    user_id = get_jwt_identity()
+    # Find user in database
+    user = User.query.get(user_id)
+    # Not a valid user
+    if not user:
+        return abort(401, description="Invalid user")
+    # Find tutorial to be edited
+    tutorial = Tutorial.query.filter_by(id=id).first()
+    # Tutorial does not exist
+    if not tutorial:
+        return abort(400, description="Tutorial does not exist")
+    elif int(user_id) != tutorial.user_id:
+        return abort(401, description="Not authorized to edit this tutorial")
+    tutorial_fields = request.json
+    update_dict = {}
+    for field in tutorial_fields:
+        if tutorial_fields[field] is not None:
+            update_dict[field] = tutorial_fields[field]
+    update_tutorial = update(Tutorial).where(Tutorial.id==id).values(update_dict)
+    # add to database
+    db.session.execute(update_tutorial)
+    db.session.commit()
+    return jsonify(tutorial_schema.dump(tutorial))
 
 
 @tutorials.route("/<int:id>/", methods=["DELETE"])

@@ -39,6 +39,7 @@ def get_user(id):
     return jsonify(result)
 
 
+# Update user profile
 @users.route("/<int:id>/", methods=["POST"])
 @jwt_required()
 def update_profile(id):
