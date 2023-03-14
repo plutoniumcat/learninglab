@@ -12,14 +12,30 @@ def get_users():
     # get all users from the database
     users_list = User.query.all()
     # return data from database in JSON format
-    result = users_schema.dump(users_list)
+    users_dict = users_schema.dump(users_list)
+    # Exclude passwords from results
+    result = []
+    for user in users_dict:
+        result.append({"id": user["id"],
+                       "username": user["username"],
+                       "email": user["email"],
+                       "profile": user["profile"],
+                       "admin": user["admin"]})
     return jsonify(result)
 
 
 @users.route("/<int:id>/", methods={"GET"})
 def get_user(id):
     user = User.query.filter_by(id=id).first()
-    result = user_schema.dump(user)
+    user_data = user_schema.dump(user)
+    # Exclude password from results
+    result = {
+        "id": user_data["id"],
+        "username": user_data["username"],
+        "email": user_data["email"],
+        "profile": user_data["profile"],
+        "admin": user_data["admin"]
+    }
     return jsonify(result)
 
 

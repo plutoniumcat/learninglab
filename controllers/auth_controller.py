@@ -50,7 +50,7 @@ def auth_login():
     # Return user email and access token
     return jsonify({"user":user.email, "token": access_token })
 
-
+#TODO Implement or delete this!
 # Decorator for other routes requiring authentication
 def authenticate_user():    
     # Get ID of user

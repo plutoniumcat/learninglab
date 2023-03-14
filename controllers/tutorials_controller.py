@@ -7,7 +7,6 @@ from schemas.tutorial_schema import tutorial_schema, tutorials_schema
 
 tutorials = Blueprint('tutorials', __name__, url_prefix="/tutorials")
 
-
 # Get all tutorials
 @tutorials.route("/", methods=["GET"])
 def get_tutorials():
@@ -61,11 +60,16 @@ def create_tutorial():
     new_tutorial.user_id = user_id
     new_tutorial.title = tutorial_fields["title"]
     new_tutorial.author = tutorial_fields["author"]
-    new_tutorial.description = tutorial_fields["description"]
-    new_tutorial.level = tutorial_fields["level"]
-    new_tutorial.prerequisites = tutorial_fields["prerequisites"]
-    new_tutorial.pricing = tutorial_fields["pricing"]
-    new_tutorial.length = tutorial_fields["length"]
+    if tutorial_fields.get("description") is not None:
+        new_tutorial.description = tutorial_fields["description"]
+    if tutorial_fields.get("level") is not None:
+        new_tutorial.level = tutorial_fields["level"]
+    if tutorial_fields.get("prerequisites") is not None:
+        new_tutorial.prerequisites = tutorial_fields["prerequisites"]
+    if tutorial_fields.get("pricing") is not None:
+        new_tutorial.pricing = tutorial_fields["pricing"]
+    if tutorial_fields.get("length") is not None:
+        new_tutorial.length = tutorial_fields["length"]
     # add to database
     db.session.add(new_tutorial)
     db.session.commit()

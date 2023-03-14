@@ -64,7 +64,8 @@ def create_curriculum():
     new_curriculum = Curriculum()
     new_curriculum.user_id = user_id
     new_curriculum.title = curriculum_fields["title"]
-    new_curriculum.description = curriculum_fields["description"]
+    if curriculum_fields.get("description") is not None:
+        new_curriculum.description = curriculum_fields["description"]
     # add to database
     db.session.add(new_curriculum)
     db.session.commit()
@@ -110,7 +111,7 @@ def add_to_curriculum(id):
     if not curriculum:
         return abort(400, description="Curriculum does not exist")
     elif curriculum.user_id != int(user_id):
-        return abort(403, description="Not authorized to alter this curriculum.")
+        return abort(403, description="Not authorized to alter this curriculum")
     # Create new association
     association_fields = association_schema.load(request.json)
     new_association = Association()
@@ -119,3 +120,27 @@ def add_to_curriculum(id):
     db.session.add(new_association)
     db.session.commit()
     return jsonify(association_schema.dump(new_association))
+
+
+@curriculums.route("/<int:curriculum_id>/<int:tutorial_id>/", methods=["DELETE"])
+@jwt_required()
+def delete_from_curriculum(curriculum_id, tutorial_id):
+    # Get ID of user who is attempting to delete
+    user_id = get_jwt_identity()
+    # Find user in database
+    user = User.query.get(user_id)
+    # Not a valid user
+    if not user:
+        return abort(401, description="Invalid user")
+    # Find curriculum to be edited
+    curriculum = Curriculum.query.filter_by(id=curriculum_id).first()
+    # curriculum does not exist
+    if not curriculum:
+        return abort(400, description="Curriculum does not exist")
+    elif curriculum.user_id != int(user_id):
+        return abort(403, description="Not authorized to alter this curriculum")
+    # Find association between curriculum and tutorial
+    association = Association.query.filter_by(curriculum_id=curriculum_id, tutorial_id=tutorial_id).first()
+    db.session.delete(association)
+    db.session.commit()
+    return {"message": "Tutorial successfully removed from curriculum"}
