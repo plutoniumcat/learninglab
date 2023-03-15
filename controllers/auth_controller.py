@@ -1,13 +1,13 @@
 from flask import Blueprint, jsonify, request, abort
+from functools import wraps
 from main import db
 from models.users import User
-from schemas.user_schema import user_schema, users_schema
+from schemas.user_schema import user_schema
 from datetime import timedelta
 from main import bcrypt
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, verify_jwt_in_request, get_jwt_identity
 
 auth = Blueprint('auth', __name__, url_prefix="/auth")
-
 
 @auth.route("/register", methods=["POST"])
 def auth_register():
@@ -50,12 +50,32 @@ def auth_login():
     # Return user email and access token
     return jsonify({"user":user.email, "token": access_token })
 
-#TODO Implement or delete this!
-# Decorator for other routes requiring authentication
-def authenticate_user(user_id):
-    # Find user in database
-    user = User.query.get(user_id)
-    # Not a valid user
-    if not user:
-        return abort(401, description="Invalid user")
-    return user_id
+
+# Decorator for other routes requiring user authentication
+def authenticate_user(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        # Verify that user has JWT token
+        verify_jwt_in_request()
+        # Get user_id
+        user_id = get_jwt_identity()
+        # Find user in database
+        user = User.query.get(user_id)
+        # Not a valid user
+        if not user:
+            return abort(401, description="Invalid user")
+        # Insert values into kwargs
+        kwargs["user_id"] = user_id
+        kwargs["user"] = user
+        return f(*args, **kwargs)
+    return decorator
+
+
+def authenticate_admin(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        user = kwargs["user"]
+        if not user.admin:
+            return abort(401, description="Admin privileges required")
+        return f(*args, **kwargs)
+    return decorator

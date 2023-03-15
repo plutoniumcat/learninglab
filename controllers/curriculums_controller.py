@@ -1,7 +1,6 @@
 from flask import Blueprint, jsonify, request, abort
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy import update
 from main import db
-from models.users import User
 from models.curriculums import Curriculum
 from models.curriculum_associations import Association
 from models.tutorials import Tutorial
@@ -49,15 +48,9 @@ def get_curriculum(id):
 
 
 @curriculums.route("/", methods=["POST"])
-@jwt_required()
-def create_curriculum():
-    # Get ID of user who is attempting to add
-    user_id = get_jwt_identity()
-    # Find user in database
-    user = User.query.get(user_id)
-    # Not a valid user
-    if not user:
-        return abort(401, description="Invalid user")
+@authenticate_user
+def create_curriculum(**kwargs):
+    user_id = kwargs["user_id"]
     # Create a new curriculum
     curriculum_fields = curriculum_schema.load(request.json)
     new_curriculum = Curriculum()
@@ -72,15 +65,9 @@ def create_curriculum():
 
 
 @curriculums.route("/<int:id>/", methods=["DELETE"])
-@jwt_required()
-def delete_curriculum(id):
-    # Get ID of user who is attempting to delete
-    user_id = get_jwt_identity()
-    # Find user in database
-    user = User.query.get(user_id)
-    # Not a valid user
-    if not user:
-        return abort(401, description="Invalid user")
+@authenticate_user
+def delete_curriculum(id, **kwargs):
+    user_id = kwargs["user_id"]
     # Find curriculum to be deleted
     curriculum = Curriculum.query.filter_by(id=id).first()
     # Check curriculum exists and belongs to user
@@ -94,16 +81,33 @@ def delete_curriculum(id):
     return jsonify(curriculum_schema.dump(curriculum))
 
 
-@curriculums.route("/<int:id>/", methods=["POST"])
-@jwt_required()
-def add_to_curriculum(id):
-    # Get ID of user who is attempting to add
-    user_id = get_jwt_identity()
-    # Find user in database
-    user = User.query.get(user_id)
-    # Not a valid user
-    if not user:
-        return abort(401, description="Invalid user")
+@curriculums.route("/<int:id>/edit", methods=["POST"])
+@authenticate_user
+def edit_curriculum(id, **kwargs):
+    user_id = kwargs["user_id"]
+    # Find curriculum to be edited
+    curriculum = Curriculum.query.filter_by(id=id).first()
+    # curriculum does not exist
+    if not curriculum:
+        return abort(400, description="Curriculum does not exist")
+    elif curriculum.user_id != int(user_id):
+        return abort(403, description="Not authorized to alter this curriculum")
+    curriculum_fields = request.json
+    update_dict = {}
+    for field in curriculum_fields:
+        if curriculum_fields[field] is not None:
+            update_dict[field] = curriculum_fields[field]
+    update_curriculum = update(Curriculum).where(Curriculum.id==id).values(update_dict)
+    # add to database
+    db.session.execute(update_curriculum)
+    db.session.commit()
+    return jsonify(curriculum_schema.dump(curriculum))
+
+
+@curriculums.route("/<int:id>/add", methods=["POST"])
+@authenticate_user
+def add_to_curriculum(id, **kwargs):
+    user_id = kwargs["user_id"]
     # Find curriculum to be edited
     curriculum = Curriculum.query.filter_by(id=id).first()
     # curriculum does not exist
@@ -122,15 +126,9 @@ def add_to_curriculum(id):
 
 
 @curriculums.route("/<int:curriculum_id>/<int:tutorial_id>/", methods=["DELETE"])
-@jwt_required()
-def delete_from_curriculum(curriculum_id, tutorial_id):
-    # Get ID of user who is attempting to delete
-    user_id = get_jwt_identity()
-    # Find user in database
-    user = User.query.get(user_id)
-    # Not a valid user
-    if not user:
-        return abort(401, description="Invalid user")
+@authenticate_user
+def delete_from_curriculum(curriculum_id, tutorial_id, **kwargs):
+    user_id = kwargs["user_id"]
     # Find curriculum to be edited
     curriculum = Curriculum.query.filter_by(id=curriculum_id).first()
     # curriculum does not exist

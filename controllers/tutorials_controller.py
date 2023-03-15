@@ -1,10 +1,9 @@
 from flask import Blueprint, jsonify, request, abort
-from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import update
 from main import db
 from models.tutorials import Tutorial
-from models.users import User
 from schemas.tutorial_schema import tutorial_schema, tutorials_schema
+from controllers.auth_controller import authenticate_admin, authenticate_user
 
 tutorials = Blueprint('tutorials', __name__, url_prefix="/tutorials")
 
@@ -45,49 +44,25 @@ def get_tutorial_by_author(author):
 
 
 @tutorials.route("/", methods=["POST"])
-@jwt_required()
-def create_tutorial():
-    # Get ID of user who is attempting to add
-    user_id = get_jwt_identity()
-    # Find user in database
-    user = User.query.get(user_id)
-    # Not a valid user
-    if not user:
-        return abort(401, description="Invalid user")
+@authenticate_user
+def create_tutorial(**kwargs):
+    user_id = kwargs["user_id"]
     # Create a new tutorial
-    tutorial_fields = tutorial_schema.load(request.json)
+    tutorial_fields = request.get_json()
     new_tutorial = Tutorial()
-    new_tutorial.url = tutorial_fields["url"]
+    # Loop through JSON and get fields
+    for key, value in tutorial_fields.items():
+        setattr(new_tutorial, key, value)
     new_tutorial.user_id = user_id
-    new_tutorial.title = tutorial_fields["title"]
-    new_tutorial.author = tutorial_fields["author"]
-    if tutorial_fields.get("description") is not None:
-        new_tutorial.description = tutorial_fields["description"]
-    if tutorial_fields.get("level") is not None:
-        new_tutorial.level = tutorial_fields["level"]
-    if tutorial_fields.get("prerequisites") is not None:
-        new_tutorial.prerequisites = tutorial_fields["prerequisites"]
-    if tutorial_fields.get("pricing") is not None:
-        new_tutorial.pricing = tutorial_fields["pricing"]
-    if tutorial_fields.get("length") is not None:
-        new_tutorial.length = tutorial_fields["length"]
-    # add to database
     db.session.add(new_tutorial)
     db.session.commit()
     return jsonify(tutorial_schema.dump(new_tutorial))
 
 
-# Edit tutorial
 @tutorials.route("/<int:id>/edit", methods=["POST"])
-@jwt_required()
-def edit_tutorial(id):
-    # Get ID of user who is attempting to edit
-    user_id = get_jwt_identity()
-    # Find user in database
-    user = User.query.get(user_id)
-    # Not a valid user
-    if not user:
-        return abort(401, description="Invalid user")
+@authenticate_user
+def edit_tutorial(id, **kwargs):
+    user_id = kwargs["user_id"]
     # Find tutorial to be edited
     tutorial = Tutorial.query.filter_by(id=id).first()
     # Tutorial does not exist
@@ -108,17 +83,9 @@ def edit_tutorial(id):
 
 
 @tutorials.route("/<int:id>/", methods=["DELETE"])
-@jwt_required()
-def delete_tutorial(id):
-    # Get ID of user who is attempting to delete
-    user_id = get_jwt_identity()
-    # Find user in database
-    user = User.query.get(user_id)
-    # Not a valid user
-    if not user:
-        return abort(401, description="Invalid user")
-    elif not user.admin:
-        return abort(401, description="Not authorized to delete tutorials")
+@authenticate_user
+@authenticate_admin
+def delete_tutorial(id, **kwargs):
     # Find tutorial to be deleted
     tutorial = Tutorial.query.filter_by(id=id).first()
     # Tutorial does not exist

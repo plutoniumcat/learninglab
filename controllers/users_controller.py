@@ -1,9 +1,9 @@
 from flask import Blueprint, jsonify, request, abort
-from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import update
 from main import db
 from models.users import User
 from schemas.user_schema import user_schema, users_schema
+from controllers.auth_controller import authenticate_admin, authenticate_user
 
 users = Blueprint('users', __name__, url_prefix="/users")
 
@@ -40,18 +40,12 @@ def get_user(id):
 
 
 # Update user profile
-@users.route("/<int:id>/", methods=["POST"])
-@jwt_required()
-def update_profile(id):
-    # Get ID of user who is attempting to edit
-    user_id = get_jwt_identity()
-    # Find user in database
-    user = User.query.get(user_id)
-    # Not a valid user
-    if not user:
-        return abort(401, description="Invalid user")
+@users.route("/<int:id>/profile", methods=["POST"])
+@authenticate_user
+def update_profile(id, **kwargs):
+    user_id = kwargs["user_id"]
     # Not the owner of the profile
-    elif int(user_id) != id:
+    if int(user_id) != id:
         return abort(401, description="Not authorized to edit this user's profile")
     # Get profile data from request
     json_data = request.json
@@ -64,17 +58,10 @@ def update_profile(id):
 
 
 @users.route("/<int:id>/", methods=["DELETE"])
-@jwt_required()
-def delete_user(id):
-    # Get ID of user who is attempting to delete
-    user_id = get_jwt_identity()
-    # Find user in database
-    user = User.query.get(user_id)
-    # Not a valid user
-    if not user:
-        return abort(401, description="Invalid user")
-    if not user.admin:
-        return abort(401, description="Not authorized to delete users")
+@authenticate_user
+@authenticate_admin
+def delete_user(id, **kwargs):
+    user = kwargs["user"]
     # Find user to be deleted
     user = User.query.filter_by(id=id).first()
     # User does not exist
