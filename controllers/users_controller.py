@@ -3,11 +3,12 @@ from sqlalchemy import update
 from main import db
 from models.users import User
 from schemas.user_schema import user_schema, users_schema
-from controllers.auth_controller import authenticate_admin, authenticate_user
+from controllers.auth_controller import authenticate_admin, authenticate_user, error_handler
 
 users = Blueprint('users', __name__, url_prefix="/users")
 
 @users.route("/", methods=["GET"])
+@error_handler
 def get_users():
     # get all users from the database
     users_list = User.query.all()
@@ -25,6 +26,7 @@ def get_users():
 
 
 @users.route("/<int:id>/", methods={"GET"})
+@error_handler
 def get_user(id):
     user = User.query.filter_by(id=id).first()
     user_data = user_schema.dump(user)
@@ -42,6 +44,7 @@ def get_user(id):
 # Update user profile
 @users.route("/<int:id>/profile", methods=["POST"])
 @authenticate_user
+@error_handler
 def update_profile(id, **kwargs):
     user_id = kwargs["user_id"]
     # Not the owner of the profile
@@ -60,6 +63,7 @@ def update_profile(id, **kwargs):
 @users.route("/<int:id>/", methods=["DELETE"])
 @authenticate_user
 @authenticate_admin
+@error_handler
 def delete_user(id, **kwargs):
     user = kwargs["user"]
     # Find user to be deleted

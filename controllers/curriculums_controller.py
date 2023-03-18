@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request, abort
 from sqlalchemy import update
+from functools import wraps
 from main import db
 from models.curriculums import Curriculum
 from models.curriculum_associations import Association
@@ -7,11 +8,30 @@ from models.tutorials import Tutorial
 from schemas.curriculum_schema import curriculum_schema, curriculums_schema
 from schemas.association_schema import association_schema
 from schemas.tutorial_schema import tutorial_schema
-from controllers.auth_controller import authenticate_user
+from controllers.auth_controller import authenticate_user, error_handler
 
 curriculums = Blueprint('curriculums', __name__, url_prefix="/curriculums")
 
+
+def curriculum_auth(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        user_id = kwargs["user_id"]
+        id = kwargs.get("id")
+        # Find curriculum to be deleted
+        curriculum = Curriculum.query.filter_by(id=id).first()
+        kwargs["curriculum"] = curriculum
+        # Check curriculum exists and belongs to user
+        if not curriculum:
+            return abort(400, description="Curriculum does not exist")
+        elif curriculum.user_id != int(user_id):
+            return abort(403, description="Not authorized to alter this curriculum.")
+        return f(*args, **kwargs)
+    return decorator
+
+
 @curriculums.route("/", methods=["GET"])
+@error_handler
 def get_curriculums():
     # get all curriculums from the database
     curriculums_list = Curriculum.query.all()
@@ -22,6 +42,7 @@ def get_curriculums():
 
 # Get curriculum and asssociated tutorials
 @curriculums.route("/<int:id>/", methods=["GET"])
+@error_handler
 def get_curriculum(id):
     # Get curriculum from database
     curriculum = Curriculum.query.filter_by(id=id).first()
@@ -49,6 +70,7 @@ def get_curriculum(id):
 
 @curriculums.route("/", methods=["POST"])
 @authenticate_user
+@error_handler
 def create_curriculum(**kwargs):
     user_id = kwargs["user_id"]
     # Create a new curriculum
@@ -66,15 +88,10 @@ def create_curriculum(**kwargs):
 
 @curriculums.route("/<int:id>/", methods=["DELETE"])
 @authenticate_user
-def delete_curriculum(id, **kwargs):
-    user_id = kwargs["user_id"]
-    # Find curriculum to be deleted
-    curriculum = Curriculum.query.filter_by(id=id).first()
-    # Check curriculum exists and belongs to user
-    if not curriculum:
-        return abort(400, description="Curriculum does not exist")
-    elif curriculum.user_id != int(user_id):
-        return abort(403, description="Not authorized to alter this curriculum.")
+@curriculum_auth
+@error_handler
+def delete_curriculum(**kwargs):
+    curriculum = kwargs["curriculum"]
     # Delete curriculum from database
     db.session.delete(curriculum)
     db.session.commit()
@@ -83,6 +100,8 @@ def delete_curriculum(id, **kwargs):
 
 @curriculums.route("/<int:id>/edit", methods=["POST"])
 @authenticate_user
+@curriculum_auth
+@error_handler
 def edit_curriculum(id, **kwargs):
     user_id = kwargs["user_id"]
     # Find curriculum to be edited
@@ -106,6 +125,8 @@ def edit_curriculum(id, **kwargs):
 
 @curriculums.route("/<int:id>/add", methods=["POST"])
 @authenticate_user
+@curriculum_auth
+@error_handler
 def add_to_curriculum(id, **kwargs):
     user_id = kwargs["user_id"]
     # Find curriculum to be edited
@@ -125,19 +146,14 @@ def add_to_curriculum(id, **kwargs):
     return jsonify(association_schema.dump(new_association))
 
 
-@curriculums.route("/<int:curriculum_id>/<int:tutorial_id>/", methods=["DELETE"])
+#Remove tutorial from curriculum
+@curriculums.route("/<int:id>/<int:tutorial_id>/", methods=["DELETE"])
 @authenticate_user
-def delete_from_curriculum(curriculum_id, tutorial_id, **kwargs):
-    user_id = kwargs["user_id"]
-    # Find curriculum to be edited
-    curriculum = Curriculum.query.filter_by(id=curriculum_id).first()
-    # curriculum does not exist
-    if not curriculum:
-        return abort(400, description="Curriculum does not exist")
-    elif curriculum.user_id != int(user_id):
-        return abort(403, description="Not authorized to alter this curriculum")
+@curriculum_auth
+@error_handler
+def delete_from_curriculum(id, tutorial_id, **kwargs):
     # Find association between curriculum and tutorial
-    association = Association.query.filter_by(curriculum_id=curriculum_id, tutorial_id=tutorial_id).first()
+    association = Association.query.filter_by(curriculum_id=id, tutorial_id=tutorial_id).first()
     db.session.delete(association)
     db.session.commit()
     return {"message": "Tutorial successfully removed from curriculum"}

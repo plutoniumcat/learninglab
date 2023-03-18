@@ -3,12 +3,13 @@ from sqlalchemy import update
 from main import db
 from models.tutorials import Tutorial
 from schemas.tutorial_schema import tutorial_schema, tutorials_schema
-from controllers.auth_controller import authenticate_admin, authenticate_user
+from controllers.auth_controller import authenticate_admin, authenticate_user, error_handler
 
 tutorials = Blueprint('tutorials', __name__, url_prefix="/tutorials")
 
 # Get all tutorials
 @tutorials.route("/", methods=["GET"])
+@error_handler
 def get_tutorials():
     # get all tutorials from the database
     tutorials_list = Tutorial.query.all()
@@ -19,6 +20,7 @@ def get_tutorials():
 
 # Get tutorial by id
 @tutorials.route("/<int:id>/", methods=["GET"])
+@error_handler
 def get_tutorial(id):
     # get tutorial with id from database
     tutorial = Tutorial.query.filter_by(id=id).first()
@@ -28,6 +30,7 @@ def get_tutorial(id):
 
 # Get all tutorials added by a user
 @tutorials.route("/users/<int:user_id>", methods=["GET"])
+@error_handler
 def get_tutorial_by_user(user_id):
     # Get all tutorials with user id
     tutorials_list = Tutorial.query.filter_by(user_id=user_id)
@@ -37,6 +40,7 @@ def get_tutorial_by_user(user_id):
 
 # Get all tutorials by an author
 @tutorials.route("authors/<string:author>", methods=["GET"])
+@error_handler
 def get_tutorial_by_author(author):
     tutorials_list = Tutorial.query.filter_by(author=author)
     result = tutorials_schema.dump(tutorials_list)
@@ -45,6 +49,7 @@ def get_tutorial_by_author(author):
 
 @tutorials.route("/", methods=["POST"])
 @authenticate_user
+@error_handler
 def create_tutorial(**kwargs):
     user_id = kwargs["user_id"]
     # Create a new tutorial
@@ -61,6 +66,7 @@ def create_tutorial(**kwargs):
 
 @tutorials.route("/<int:id>/edit", methods=["POST"])
 @authenticate_user
+@error_handler
 def edit_tutorial(id, **kwargs):
     user_id = kwargs["user_id"]
     # Find tutorial to be edited
@@ -85,6 +91,7 @@ def edit_tutorial(id, **kwargs):
 @tutorials.route("/<int:id>/", methods=["DELETE"])
 @authenticate_user
 @authenticate_admin
+@error_handler
 def delete_tutorial(id, **kwargs):
     # Find tutorial to be deleted
     tutorial = Tutorial.query.filter_by(id=id).first()

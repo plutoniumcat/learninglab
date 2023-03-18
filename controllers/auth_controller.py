@@ -6,10 +6,40 @@ from schemas.user_schema import user_schema
 from datetime import timedelta
 from main import bcrypt
 from flask_jwt_extended import create_access_token, verify_jwt_in_request, get_jwt_identity
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError, ProgrammingError, OperationalError
+from sqlalchemy.orm.exc import UnmappedInstanceError
 
 auth = Blueprint('auth', __name__, url_prefix="/auth")
 
+
+def error_handler(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except KeyError:
+            return abort(400, description="Error: Check that your request has all \
+                         required fields, and that any parameters in the url are valid.")
+        except IntegrityError:
+            return abort(400, description="Error: The database could not process your request. \
+                         Please check that the data you are sending is correct.")
+        except UnmappedInstanceError:
+            return abort(400, description="Error: The database could not process your request. \
+                         Please check that the url parameters are correct.")
+        # Attempted to access table that does not exist.
+        except ProgrammingError as e:
+            return abort(500, description="Error: The database could not process your request, \
+                         possibly because the tables have not been correctly set up. \
+                         If this issue persists, please contact an administrator.")
+        except OperationalError:
+            return abort(500, description="Error: The database could not process your request, \
+                         possibly because the database server is down. \
+                         If this issue persists, please contact an administrator.")
+    return decorator
+
+
 @auth.route("/register", methods=["POST"])
+@error_handler
 def auth_register():
     # Load request data into user schema
     user_fields = user_schema.load(request.json)
@@ -35,6 +65,7 @@ def auth_register():
 
 
 @auth.route("login", methods=["POST"])
+@error_handler
 def auth_login():
     # Get user data from the request
     user_fields = user_schema.load(request.json)
