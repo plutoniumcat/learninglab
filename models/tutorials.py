@@ -1,3 +1,4 @@
+from sqlalchemy.orm import relationship
 from main import db
 
 class Tutorial(db.Model):
@@ -14,3 +15,4 @@ class Tutorial(db.Model):
     prerequisites = db.Column(db.String())
     pricing = db.Column(db.Integer)
     length = db.Column(db.String())
+    association = relationship("Association", cascade="all, delete-orphan")
