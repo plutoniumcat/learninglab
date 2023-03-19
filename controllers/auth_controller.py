@@ -6,7 +6,7 @@ from schemas.user_schema import user_schema
 from datetime import timedelta
 from main import bcrypt
 from flask_jwt_extended import create_access_token, verify_jwt_in_request, get_jwt_identity
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError, ProgrammingError, OperationalError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError, ProgrammingError, OperationalError, DataError
 from sqlalchemy.orm.exc import UnmappedInstanceError
 
 auth = Blueprint('auth', __name__, url_prefix="/auth")
@@ -17,20 +17,28 @@ def error_handler(f):
     def decorator(*args, **kwargs):
         try:
             return f(*args, **kwargs)
+        # Required field missing
         except KeyError:
             return abort(400, description="Error: Check that your request has all \
                          required fields, and that any parameters in the url are valid.")
+        # JSON request is misformed
         except IntegrityError:
             return abort(400, description="Error: The database could not process your request. \
                          Please check that the data you are sending is correct.")
+        # URL parameter does not correspond to any entry
         except UnmappedInstanceError:
             return abort(400, description="Error: The database could not process your request. \
                          Please check that the url parameters are correct.")
+        # Attempted to send incorrect datatype
+        except DataError:
+            return abort(400, description="Error: The database could not process your request. \
+                         Please check that the data you are sending is correct.")
         # Attempted to access table that does not exist.
         except ProgrammingError as e:
             return abort(500, description="Error: The database could not process your request, \
                          possibly because the tables have not been correctly set up. \
                          If this issue persists, please contact an administrator.")
+        # Database server down
         except OperationalError:
             return abort(500, description="Error: The database could not process your request, \
                          possibly because the database server is down. \
